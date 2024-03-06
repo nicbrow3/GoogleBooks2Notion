@@ -2,7 +2,6 @@ import requests
 import datetime
 
 database_id = "97ee0dad-43dd-472f-a305-f1a1d8d88df2"
-#database_id = "b87d2fbe-79e9-4e6a-b8d0-1fd960bf4fec" #Home wiki ID
 
 notion_token = "secret_uODspXB7EwM1Vw0mQVVCNwnlFT6W6BeCjZvETtF3uPi"
 google_books_api = "AIzaSyDrE8DT9CoGMuDmlZvrLEbnTciyiFKY454"
@@ -27,6 +26,7 @@ def get_database_pages(db_id, token):
     else:
         return []
 
+
 def check_titles_and_update(token, db_id):
     global book_title
     global page_id
@@ -38,27 +38,41 @@ def check_titles_and_update(token, db_id):
             if page_title.endswith(':'):
                 page_id = page['id']
                 book_title = page_title[:-1]
-                url = "https://www.googleapis.com/books/v1/volumes?q=intitle:"+book_title+"&key="+google_books_api
+                url = "https://www.googleapis.com/books/v1/volumes?q=intitle:" + \
+                    book_title+"&key="+google_books_api
                 response = requests.get(url)
                 book_data = response.json()
-                book = book_data['items'][0]['volumeInfo'] # Assuming the first item in the items list is the book we're interested in
+                # Assuming the first item in the items list is the book we're interested in
+                book = book_data['items'][0]['volumeInfo']
                 title = book.get('title', 'No title available')
                 authors = book.get('authors', ['No authors available'])
                 publisher = book.get('publisher', 'No publisher available')
-                published_date = book.get('publishedDate', 'No published date available')
+                published_date = book.get(
+                    'publishedDate', 'No published date available')
                 page_count = book.get('pageCount', 'Page count not available')
-                genres = book.get('categories', ['No genre available'])
-                summary = book.get('description', 'No description available')
+                try:
+                    cover_image_url = book_data['items'][0]['volumeInfo']['imageLinks']['thumbnail']
+                except KeyError:
+                    cover_image_url = ''
+                genres = []
+                for category in book.get('categories', []):
+                    genres.append(category)
 
+                summary = book.get('description', 'No description available')
                 if summary and len(summary) > 2000:
                     summary = summary[:1997] + "..."
 
-                ISBN_10 = next((identifier['identifier'] for identifier in book.get('industryIdentifiers', []) if identifier['type'] == 'ISBN_10'), 'No ISBN available')
-                ISBN_13 = next((identifier['identifier'] for identifier in book.get('industryIdentifiers', []) if identifier['type'] == 'ISBN_13'), 'No ISBN available')
+                ISBN_10 = next((identifier['identifier'] for identifier in book.get(
+                    'industryIdentifiers', []) if identifier['type'] == 'ISBN_10'), 'No ISBN available')
+                ISBN_13 = next((identifier['identifier'] for identifier in book.get(
+                    'industryIdentifiers', []) if identifier['type'] == 'ISBN_13'), 'No ISBN available')
+
+                # cover_image_url = get_audiobook_cover(title, google_books_api)
 
                 update_url = f"https://api.notion.com/v1/pages/{page_id}"
 
-                update_payload = { #properties that we're editing in the target page
+                update_payload = {  # properties that we're editing in the target page
+
                     "properties": {
                         "Total Pages": {
                             "number": page_count  # integer
@@ -67,8 +81,7 @@ def check_titles_and_update(token, db_id):
                             "multi_select": [{"name": author} for author in authors]
                         },
                         "Category": {
-                            "multi_select": [{"name": genre} for genre in genres]
-                        },
+                            "multi_select": [{"name": genre} for genre in genres]},
                         "Title": {
                             "title": [{"text": {"content": title}}]
                         },
@@ -94,17 +107,47 @@ def check_titles_and_update(token, db_id):
                                 "start": str(datetime.date.today()),
                                 "end": str(datetime.date.today() + datetime.timedelta(days=7))
                             }
+                        },
+                        "Image": {
+                            "type": "files",
+                            "files": [
+                                {
+                                    "name": "Cover Image",  # Optional name for the file
+                                    "type": "external",
+                                    "external": {
+                                        "url": cover_image_url
+                                    }
+                                }
+                            ]
                         }
-                                 }
+                    },
+                    "icon": {
+                        "type": "external",
+                        "external": {
+                            "url": cover_image_url
+                        }
+                    },
+                    "cover": {
+                        "type": "external",
+                        "external": {
+                            "url": cover_image_url
+                        }
+                    }
                 }
 
-                update_response = requests.patch(update_url, headers=headers, json=update_payload)
+                # print(update_payload)
+                update_response = requests.patch(
+                    update_url, headers=headers, json=update_payload)
 
                 if update_response.status_code == 200:
                     print("Property updated successfully.")
                 else:
-                    print(f"Failed to update property. Status code: {update_response.status_code}")
+                    print(f"Failed to update property. Status code: {
+                          update_response.status_code}")
                     print(update_response.json())
+
 
 check_titles_and_update(notion_token, database_id)
 
+# if it's just for me, look at my plex library for the audiobook length data?
+# could also grab the narrator from there
