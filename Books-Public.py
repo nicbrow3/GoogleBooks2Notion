@@ -9,6 +9,8 @@ latest_notion_version = "2022-06-28"  # Notion API version
 
 google_books_api = "<your google books api key>"
 
+line_end_char = ":"
+
 global book_title
 book_title = ""
 page_id = ""
@@ -41,7 +43,7 @@ def check_titles_and_update(token, db_id):
         title_property_name = "Title"  # Adjust based on your actual title property name
         if title_property_name in page['properties']:
             page_title = page['properties'][title_property_name]['title'][0]['plain_text']
-            if page_title.endswith(':'):
+            if page_title.endswith(line_end_char):
                 page_id = page['id']
                 book_title = page_title[:-1]
                 url = "https://www.googleapis.com/books/v1/volumes?q=intitle:" + \
