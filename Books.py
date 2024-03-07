@@ -2,14 +2,11 @@ import requests
 import datetime
 
 database_id = "97ee0dad-43dd-472f-a305-f1a1d8d88df2"
-
 notion_token = "secret_uODspXB7EwM1Vw0mQVVCNwnlFT6W6BeCjZvETtF3uPi"
+
 google_books_api = "AIzaSyDrE8DT9CoGMuDmlZvrLEbnTciyiFKY454"
 
-global book_title
-book_title = ""
-page_id = ""
-headers = {}
+plex_url = "http://192.168.50.131:32400"
 
 
 def get_database_pages(db_id, token):
@@ -142,8 +139,8 @@ def check_titles_and_update(token, db_id):
                 if update_response.status_code == 200:
                     print("Property updated successfully.")
                 else:
-                    print(f"Failed to update property. Status code: {
-                          update_response.status_code}")
+                    print(
+                        f"Failed to update property. Status code: {update_response.status_code}")
                     print(update_response.json())
 
 
